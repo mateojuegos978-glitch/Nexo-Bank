@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexo-Bank | Panel</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --surface: #1e293b;
+            --surface-alt: #334155;
+            --primary: #10b981;
+            --primary-hover: #059669;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --danger: #ef4444;
+            --success: #10b981;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body { background-color: var(--bg); color: var(--text); padding-bottom: 2rem; }
+
+        header {
+            background-color: var(--surface); padding: 1.5rem 2rem;
+            display: flex; justify-content: space-between; align-items: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3); position: sticky; top: 0; z-index: 10;
+        }
+        header h1 { color: var(--primary); font-size: 1.5rem; }
+        .logout-btn { background: transparent; color: var(--danger); border: 1px solid var(--danger); padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; transition: 0.3s; }
+
+        .container { max-width: 1000px; margin: 2rem auto; padding: 0 1rem; display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+        @media (max-width: 768px) { .container { grid-template-columns: 1fr; } }
+
+        .card-panel { background-color: var(--surface); border-radius: 12px; padding: 1.5rem; box-shadow: 0 10px 15px rgba(0,0,0,0.3); animation: slideUp 0.5s ease-out; }
+        .card-panel h2 { font-size: 1.2rem; margin-bottom: 1.5rem; color: var(--text-muted); border-bottom: 1px solid var(--surface-alt); padding-bottom: 0.5rem; }
+
+        /* Tarjeta Virtual con botón de ocultar */
+        .credit-card {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            border: 1px solid #334155; border-radius: 16px; padding: 1.5rem;
+            position: relative; overflow: hidden; box-shadow: 0 15px 25px rgba(0,0,0,0.5);
+            margin-bottom: 1.5rem; transition: transform 0.3s;
+        }
+        .credit-card:hover { transform: translateY(-5px); }
+        
+        .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; }
+        .card-chip { width: 45px; height: 35px; background: linear-gradient(135deg, #fbbf24, #d97706); border-radius: 6px; }
+        
+        .toggle-visibility {
+            background: rgba(255,255,255,0.1); border: none; color: white; 
+            padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 0.8rem;
+        }
+        .toggle-visibility:hover { background: rgba(255,255,255,0.2); }
+
+        .card-number { font-size: 1.4rem; letter-spacing: 2px; margin-bottom: 1.5rem; font-family: 'Courier New', monospace; min-height: 1.6rem; }
+        .card-details { display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; }
+        .card-details span { display: block; font-size: 1rem; color: white; margin-top: 0.2rem; font-family: monospace; }
+
+        .balance-display { font-size: 2.5rem; font-weight: bold; margin-bottom: 1.5rem; color: var(--primary); }
+        .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+        .btn { padding: 0.8rem; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; color: white; text-align: center; }
+        .btn-green { background-color: var(--primary); }
+        .btn-blue { background-color: #3b82f6; }
+        
+        .transfer-box { background: var(--bg); padding: 1rem; border-radius: 8px; margin-top: 1rem; border: 1px solid var(--surface-alt); }
+        .transfer-box input { width: 100%; padding: 0.7rem; margin-bottom: 0.5rem; border-radius: 4px; border: 1px solid var(--surface-alt); background: var(--surface); color: white; outline: none; }
+
+        .history-list { list-style: none; max-height: 400px; overflow-y: auto; }
+        .history-item { display: flex; justify-content: space-between; padding: 1rem 0; border-bottom: 1px solid var(--surface-alt); align-items: center; }
+        .h-amount.positive { color: var(--success); }
+        .h-amount.negative { color: var(--danger); }
+
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Nexo-Bank</h1>
+        <div>
+            <span style="margin-right: 15px; color: var(--text-muted);" id="user-greeting"></span>
+            <button class="logout-btn" onclick="cerrarSesion()">Cerrar Sesión</button>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="card-panel">
+            <h2>Mi Billetera</h2>
+            
+            <div class="credit-card">
+                <div class="card-header">
+                    <div class="card-chip"></div>
+                    <button class="toggle-visibility" onclick="toggleCardData()" id="btn-toggle">Mostrar Datos</button>
+                </div>
+                <div class="card-number" id="v-card-num">•••• •••• •••• ••••</div>
+                <div class="card-details">
+                    <div>EXPIRACIÓN<span id="v-card-exp">••/••</span></div>
+                    <div>CVV<span id="v-card-cvv">•••</span></div>
+                </div>
+            </div>
+
+            <p style="color: var(--text-muted); font-size: 0.9rem;">Saldo Disponible</p>
+            <div class="balance-display" id="balance">$0</div>
+
+            <div class="actions">
+                <button class="btn btn-green" onclick="operarDinero('ingreso')">Ingresar Dinero</button>
+                <button class="btn btn-blue" onclick="operarDinero('retiro')">Retirar Dinero</button>
+            </div>
+
+            <div class="transfer-box">
+                <h3 style="font-size: 1rem; margin-bottom: 1rem;">Transferir a Terceros</h3>
+                <input type="text" id="trans-rut" placeholder="RUT Destino (Ej: 11222333-4)">
+                <input type="number" id="trans-amount" placeholder="Monto a transferir">
+                <button class="btn btn-green" style="width: 100%;" onclick="transferir()">Enviar Transferencia</button>
+            </div>
+        </div>
+
+        <div class="card-panel">
+            <h2>Historial de Movimientos</h2>
+            <ul class="history-list" id="history-list"></ul>
+        </div>
+    </div>
+
+    <script>
+        const currentUserRut = sessionStorage.getItem('nexo_activeUser');
+        if (!currentUserRut) window.location.href = 'banco.html';
+
+        let users = JSON.parse(localStorage.getItem('nexo_users')) || {};
+        let userData = users[currentUserRut];
+        let showingData = false;
+
+        function toggleCardData() {
+            showingData = !showingData;
+            const btn = document.getElementById('btn-toggle');
+            
+            if (showingData) {
+                document.getElementById('v-card-num').textContent = userData.card.numero;
+                document.getElementById('v-card-exp').textContent = userData.card.exp;
+                document.getElementById('v-card-cvv').textContent = userData.card.cvv;
+                btn.textContent = "Ocultar Datos";
+            } else {
+                document.getElementById('v-card-num').textContent = "•••• •••• •••• ••••";
+                document.getElementById('v-card-exp').textContent = "••/••";
+                document.getElementById('v-card-cvv').textContent = "•••";
+                btn.textContent = "Mostrar Datos";
+            }
+        }
+
+        const formatMoney = (amount) => new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(amount);
+
+        function renderUI() {
+            document.getElementById('user-greeting').textContent = `Hola, ${currentUserRut}`;
+            document.getElementById('balance').textContent = formatMoney(userData.balance);
+            renderHistory();
+        }
+
+        function renderHistory() {
+            const list = document.getElementById('history-list');
+            list.innerHTML = '';
+            const reversedHistory = [...userData.history].reverse();
+            reversedHistory.forEach(mov => {
+                const li = document.createElement('li');
+                li.className = 'history-item';
+                li.innerHTML = `
+                    <div><strong>${mov.type}</strong><br><small>${mov.detail}</small></div>
+                    <div class="h-amount ${mov.amount > 0 ? 'positive' : 'negative'}">${formatMoney(mov.amount)}</div>
+                `;
+                list.appendChild(li);
+            });
+        }
+
+        function operarDinero(tipo) {
+            const amount = parseInt(prompt(`Monto a ${tipo}:`));
+            if (isNaN(amount) || amount <= 0) return;
+            if (tipo === 'retiro' && amount > userData.balance) return alert("Saldo insuficiente");
+
+            const realAmount = tipo === 'ingreso' ? amount : -amount;
+            userData.balance += realAmount;
+            userData.history.push({ type: tipo === 'ingreso' ? 'Depósito' : 'Retiro', amount: realAmount, detail: 'Cajero Nexo', date: new Date() });
+            save();
+        }
+
+        function transferir() {
+            const dest = document.getElementById('trans-rut').value;
+            const amount = parseInt(document.getElementById('trans-amount').value);
+            if (!users[dest] || isNaN(amount) || amount > userData.balance) return alert("Error en los datos o saldo");
+
+            userData.balance -= amount;
+            userData.history.push({ type: 'Transferencia', amount: -amount, detail: `A: ${dest}` });
+            users[dest].balance += amount;
+            users[dest].history.push({ type: 'Transferencia', amount: amount, detail: `De: ${currentUserRut}` });
+            save();
+        }
+
+        function save() {
+            users[currentUserRut] = userData;
+            localStorage.setItem('nexo_users', JSON.stringify(users));
+            renderUI();
+        }
+
+        function cerrarSesion() { sessionStorage.removeItem('nexo_activeUser'); window.location.href = 'banco.html'; }
+        renderUI();
+    </script>
+</body>
+</html>

@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexo-Bank | Acceso</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --surface: #1e293b;
+            --primary: #10b981;
+            --primary-hover: #059669;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --error: #ef4444;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
+        body { background-color: var(--bg); color: var(--text); display: flex; justify-content: center; align-items: center; height: 100vh; }
+
+        .container {
+            background-color: var(--surface); padding: 2.5rem; border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5); width: 100%; max-width: 400px;
+            text-align: center; animation: fadeIn 0.5s ease-in-out;
+        }
+
+        h1 { margin-bottom: 0.5rem; color: var(--primary); font-size: 2rem; }
+        p.subtitle { color: var(--text-muted); margin-bottom: 2rem; font-size: 0.9rem; }
+
+        .input-group { margin-bottom: 1.2rem; text-align: left; }
+        .input-group label { display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: var(--text-muted); }
+        .input-group input {
+            width: 100%; padding: 0.75rem; border-radius: 6px; border: 1px solid #334155;
+            background-color: #0f172a; color: white; outline: none; transition: border 0.3s;
+        }
+        .input-group input:focus { border-color: var(--primary); }
+
+        .error-msg { color: var(--error); font-size: 0.8rem; margin-top: 0.5rem; display: none; }
+
+        button {
+            width: 100%; padding: 0.8rem; background-color: var(--primary); color: white;
+            border: none; border-radius: 6px; font-size: 1rem; font-weight: bold;
+            cursor: pointer; transition: background 0.3s, transform 0.1s; margin-top: 1rem;
+        }
+        button:hover { background-color: var(--primary-hover); }
+        button:active { transform: scale(0.98); }
+
+        .toggle-link { margin-top: 1.5rem; font-size: 0.9rem; color: var(--text-muted); cursor: pointer; transition: color 0.3s; }
+        .toggle-link:hover { color: var(--primary); }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+    <div class="container" id="auth-box">
+        <h1>Nexo-Bank</h1>
+        <p class="subtitle" id="form-subtitle">Inicia sesión en tu banca digital</p>
+
+        <form id="auth-form">
+            <div class="input-group">
+                <label for="rut">RUT (Ej: 12345678-9)</label>
+                <input type="text" id="rut" placeholder="Ingresa tu RUT" required autocomplete="off">
+                <div class="error-msg" id="rut-error">RUT inválido.</div>
+            </div>
+            <div class="input-group">
+                <label for="password">Contraseña</label>
+                <input type="password" id="password" placeholder="Tu contraseña" required>
+            </div>
+            <div class="error-msg" id="general-error" style="margin-bottom: 1rem;"></div>
+            
+            <button type="submit" id="submit-btn">Ingresar</button>
+        </form>
+
+        <div class="toggle-link" id="toggle-mode">¿No tienes cuenta? Regístrate aquí</div>
+    </div>
+
+    <script>
+        // Si ya hay sesión, redirigir
+        if (sessionStorage.getItem('nexo_activeUser')) {
+            window.location.href = 'panel.html';
+        }
+
+        let isLoginMode = true;
+
+        const form = document.getElementById('auth-form');
+        const rutInput = document.getElementById('rut');
+        const passInput = document.getElementById('password');
+        const rutError = document.getElementById('rut-error');
+        const generalError = document.getElementById('general-error');
+        const toggleBtn = document.getElementById('toggle-mode');
+        const submitBtn = document.getElementById('submit-btn');
+        const subtitle = document.getElementById('form-subtitle');
+
+        // Formateo automático de RUT (agrega guión)
+        rutInput.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/[^0-9kK]/g, '');
+            if (value.length > 1) {
+                value = value.slice(0, -1) + '-' + value.slice(-1);
+            }
+            e.target.value = value.toUpperCase();
+            rutError.style.display = 'none';
+            generalError.style.display = 'none';
+        });
+
+        // Validación Matemática del RUT Chileno
+        function validarRut(rut) {
+            let cleanRut = rut.replace(/[^0-9K]/g, '');
+            if (cleanRut.length < 8) return false;
+            
+            let cuerpo = cleanRut.slice(0, -1);
+            let dv = cleanRut.slice(-1);
+            
+            let suma = 0;
+            let multiplo = 2;
+            
+            for (let i = cuerpo.length - 1; i >= 0; i--) {
+                suma += multiplo * parseInt(cuerpo.charAt(i));
+                multiplo = multiplo < 7 ? multiplo + 1 : 2;
+            }
+            
+            let dvEsperado = 11 - (suma % 11);
+            dvEsperado = dvEsperado === 11 ? '0' : dvEsperado === 10 ? 'K' : dvEsperado.toString();
+            
+            return dv === dvEsperado;
+        }
+
+        // Cambiar entre Login y Registro
+        toggleBtn.addEventListener('click', () => {
+            isLoginMode = !isLoginMode;
+            subtitle.textContent = isLoginMode ? 'Inicia sesión en tu banca digital' : 'Crea tu cuenta nueva';
+            submitBtn.textContent = isLoginMode ? 'Ingresar' : 'Registrarse';
+            toggleBtn.textContent = isLoginMode ? '¿No tienes cuenta? Regístrate aquí' : '¿Ya tienes cuenta? Inicia sesión';
+            generalError.style.display = 'none';
+            rutError.style.display = 'none';
+        });
+
+        // Generador de Tarjeta Virtual
+        function generarTarjeta() {
+            const generarBloque = () => Math.floor(1000 + Math.random() * 9000);
+            const numero = `45${Math.floor(10+Math.random()*89)} ${generarBloque()} ${generarBloque()} ${generarBloque()}`;
+            const hoy = new Date();
+            const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+            const año = String(hoy.getFullYear() + 4).slice(-2);
+            const cvv = String(Math.floor(100 + Math.random() * 900));
+            return { numero, exp: `${mes}/${año}`, cvv };
+        }
+
+        // Lógica de Submit (Registro / Login)
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const rut = rutInput.value;
+            const pass = passInput.value;
+
+            if (!validarRut(rut)) {
+                rutError.style.display = 'block';
+                return;
+            }
+
+            let users = JSON.parse(localStorage.getItem('nexo_users')) || {};
+
+            if (isLoginMode) {
+                if (users[rut] && users[rut].password === pass) {
+                    sessionStorage.setItem('nexo_activeUser', rut);
+                    window.location.href = 'panel.html';
+                } else {
+                    generalError.textContent = 'RUT o contraseña incorrectos.';
+                    generalError.style.display = 'block';
+                }
+            } else {
+                if (users[rut]) {
+                    generalError.textContent = 'El RUT ya está registrado.';
+                    generalError.style.display = 'block';
+                } else {
+                    // Crear nuevo usuario
+                    users[rut] = {
+                        password: pass,
+                        balance: 0,
+                        card: generarTarjeta(),
+                        history: []
+                    };
+                    localStorage.setItem('nexo_users', JSON.stringify(users));
+                    sessionStorage.setItem('nexo_activeUser', rut);
+                    window.location.href = 'panel.html';
+                }
+            }
+        });
+    </script>
+</body>
+</html>
